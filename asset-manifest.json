@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/refactored-spork/static/css/main.0ca4c188.css",
+    "main.js": "/refactored-spork/static/js/main.b99b8da8.js",
+    "index.html": "/refactored-spork/index.html",
+    "main.0ca4c188.css.map": "/refactored-spork/static/css/main.0ca4c188.css.map",
+    "main.b99b8da8.js.map": "/refactored-spork/static/js/main.b99b8da8.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0ca4c188.css",
+    "static/js/main.b99b8da8.js"
+  ]
+}
