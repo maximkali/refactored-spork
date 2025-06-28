@@ -46,8 +46,9 @@ export const Lobby: React.FC = () => {
   };
 
   const startGame = () => {
-    if (game.players.length < 2) {
-      setError('You need at least 2 players to start');
+    // Allow starting with just the admin (first player)
+    if (game.players.length < 1) {
+      setError('No players in the game');
       return;
     }
     onAction('ADVANCE_ROUND', { roundNumber: 1 });
