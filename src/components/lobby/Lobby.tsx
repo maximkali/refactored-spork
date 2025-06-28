@@ -99,13 +99,13 @@ export const Lobby: React.FC = () => {
               <h3>Host Controls</h3>
               <button 
                 onClick={startGame}
-                disabled={activePlayers.length < 2}
+                disabled={activePlayers.length < 1}
               >
                 Start Game
               </button>
-              {activePlayers.length < 2 && (
+              {activePlayers.length < 1 && (
                 <div className="error-message">
-                  Need at least 2 players to start
+                  No players in the game
                 </div>
               )}
             </div>
