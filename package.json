@@ -4,12 +4,16 @@
   "description": "TypeScript implementation of bottle game data model",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://maximkali.github.io/refactored-spork",
   "scripts": {
+    "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "jest",
-    "start": "react-scripts start"
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "dependencies": {
+    "gh-pages": "^6.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.3",
