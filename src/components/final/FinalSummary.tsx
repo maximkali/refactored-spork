@@ -65,7 +65,7 @@ export const FinalSummary: React.FC<FinalSummaryProps> = ({ game, player, onExpo
     // Add table header
     doc.setFontSize(12);
     doc.text('Rank', 10, 190);
-    doc.text('Fun Name', 40, 190);
+    doc.text('Game Name', 40, 190);
     doc.text('Label Name', 100, 190);
     doc.text('Price', 160, 190);
 
@@ -148,7 +148,7 @@ export const FinalSummary: React.FC<FinalSummaryProps> = ({ game, player, onExpo
         <div className="table-grid">
           <div className="header-row">
             <div className="cell">Rank</div>
-            <div className="cell">Fun Name</div>
+            <div className="cell">Game Name</div>
             <div className="cell">Label Name</div>
             <div className="cell">Price</div>
           </div>

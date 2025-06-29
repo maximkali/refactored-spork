@@ -171,23 +171,32 @@ const styles = `:global {
   }
 
   .bottle-rank {
-    min-width: 50px;
-    font-weight: bold;
+    min-width: 3.125rem;
+    font-weight: 600;
+    font-size: var(--text-base);
+    font-family: var(--font-sans);
   }
 
   .crown {
-    margin-left: 10px;
-    font-size: 1.5em;
+    margin-left: 0.625rem;
+    font-size: var(--text-lg);
     color: gold;
+    line-height: 1;
   }
 
   .player-points {
-    margin: 20px 0;
+    margin: 1.25rem 0;
+    font-size: var(--text-base);
+    font-family: var(--font-sans);
+    color: var(--text-primary);
   }
 
   .points-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    font-size: var(--text-base);
+    font-family: var(--font-sans);
     gap: 10px;
     margin-top: 10px;
   }

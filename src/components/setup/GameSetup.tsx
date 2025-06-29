@@ -1,37 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { Game, Status } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { Game, Status, Bottle } from '../../types';
 import { createInitialGame, addBottle, finalizeSetup } from '../../game/utils';
 import { v4 as uuidv4 } from 'uuid';
+import GameSetupWizard from './GameSetupWizard';
+import { getBottleOptionsForPlayers } from '../../utils/gameSetups';
+import './GameSetup.css';
+import './GameSetupWizard.css';
 
 interface GameSetupProps {
   onGameCreated: (game: Game) => void;
 }
 
 interface BottleFormData {
-  label: string;
+  labelName: string;
   funName: string;
   price: number;
 }
 
+interface SetupOption {
+  players: number;
+  bottles: number;
+  rounds: number;
+  bottlesPerRound: number;
+  bottleEqPerPerson: number;
+  ozPerPersonPerBottle: number;
+}
+
 export const GameSetup: React.FC<GameSetupProps> = ({ onGameCreated }) => {
+  const navigate = useNavigate();
   const [hostName, setHostName] = useState('');
-  const [bottles, setBottles] = useState<BottleFormData[]>(
-    Array(20).fill({ label: '', funName: '', price: 1 })
-  );
+  const [bottles, setBottles] = useState<BottleFormData[]>([]);
+  const [gameSetup, setGameSetup] = useState<SetupOption | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [setupComplete, setSetupComplete] = useState(false);
+
+  // Initialize bottles when setup is complete
+  useEffect(() => {
+    if (gameSetup) {
+      setBottles(Array(gameSetup.bottles).fill(null).map(() => ({
+        labelName: '',
+        funName: '',
+        price: 0
+      })));
+    }
+  }, [gameSetup]);
 
   const validateBottle = (bottle: BottleFormData, index: number): string[] => {
     const errors: string[] = [];
 
-    // Label validation
-    if (!bottle.label.trim()) {
+    if (!bottle.labelName.trim()) {
       errors.push(`Label is required for bottle ${index + 1}`);
-    } else if (bottle.label.length < 3 || bottle.label.length > 20) {
+    } else if (bottle.labelName.length < 3 || bottle.labelName.length > 20) {
       errors.push(`Label must be between 3 and 20 characters for bottle ${index + 1}`);
     }
 
-    // Price validation
     if (bottle.price < 1) {
       errors.push(`Price must be at least 1 for bottle ${index + 1}`);
     }
@@ -47,33 +71,82 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onGameCreated }) => {
 
   const handleBottleChange = (index: number, field: keyof BottleFormData, value: string | number) => {
     const newBottles = [...bottles];
-    newBottles[index] = {
-      ...newBottles[index],
-      [field]: typeof value === 'string' ? value.trim() : value
-    };
+    newBottles[index] = { ...newBottles[index], [field]: value };
     setBottles(newBottles);
   };
 
-  const createAndRandomizeGame = async () => {
-    if (!validateAllBottles()) return;
+  const handlePreview = () => {
+    const isValid = validateAllBottles();
+    if (isValid) {
+      setPreviewVisible(true);
+    }
+  };
 
-    // Create initial game with host
-    const game = createInitialGame(hostName.trim());
-
-    // Add all bottles
-    bottles.forEach((bottle, index) => {
-      addBottle(game, bottle.label, bottle.funName, bottle.price);
-    });
-
-    // Finalize setup (randomizes bottles)
-    const finalGame = finalizeSetup(game);
-
-    // Copy join link to clipboard
-    const joinLink = `${window.location.origin}/join/${finalGame.id}`;
-    await navigator.clipboard.writeText(joinLink);
+  const saveGame = () => {
+    if (!gameSetup) return;
     
-    // Show preview
-    setPreviewVisible(true);
+    // Validate all bottles have required fields
+    const validationErrors: string[] = [];
+    bottles.forEach((bottle, index) => {
+      const errors = validateBottle(bottle, index);
+      if (errors.length > 0) {
+        validationErrors.push(...errors);
+      }
+    });
+    
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    
+    // Create initial game with the host name
+    const game = createInitialGame(hostName || 'Host');
+    
+    // Add bottles to the game
+    bottles.forEach((bottle, index) => {
+      const roundIndex = Math.floor(index / gameSetup.bottlesPerRound);
+      const bottleToAdd = {
+        labelName: bottle.labelName,
+        funName: bottle.funName || `Bottle ${index + 1}`,
+        price: bottle.price,
+        roundIndex
+      };
+      
+      // Add bottle to the game with the correct parameters
+      addBottle(
+        game,
+        bottleToAdd.labelName,
+        bottleToAdd.funName,
+        bottleToAdd.price
+      );
+      
+      // Update the round index separately since it's not in the addBottle signature
+      const addedBottle = game.bottles[game.bottles.length - 1];
+      if (addedBottle) {
+        addedBottle.roundIndex = bottleToAdd.roundIndex;
+      }
+    });
+    
+    // Finalize setup with the game instance
+    finalizeSetup(game);
+    
+    // Notify parent component
+    onGameCreated(game);
+    
+    // Mark setup as complete
+    setSetupComplete(true);
+    
+    // Navigate to game lobby
+    navigate(`/lobby/${game.id}`);
+  };
+
+  const handleStartGame = () => {
+    if (!hostName.trim()) {
+      setErrors(['Please enter your name as the host']);
+      return;
+    }
+
+    saveGame();
   };
 
   const generatePreview = () => {
@@ -86,212 +159,196 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onGameCreated }) => {
     });
 
     return (
-      <div className="preview-grid">
-        <h3>Round Preview</h3>
-        {rounds.map((roundBottles, roundIndex) => (
-          <div key={roundIndex} className="round-row">
-            <div className="round-label">Round {roundIndex + 1}</div>
-            <div className="bottles-row">
-              {roundBottles.map((bottle, bottleIndex) => (
-                <div key={bottleIndex} className="bottle-cell">
-                  {bottle.funName || `Bottle ${roundIndex * 4 + bottleIndex + 1}`}
-                </div>
-              ))}
+      <div className="card" style={{ marginTop: '2rem' }}>
+        <h3 style={{ marginTop: 0 }}>Round Preview</h3>
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {rounds.map((roundBottles, roundIndex) => (
+            <div key={roundIndex} style={{ 
+              display: 'grid',
+              gridTemplateColumns: '100px 1fr',
+              alignItems: 'start',
+              gap: '1rem',
+              padding: '1rem',
+              backgroundColor: 'var(--background)',
+              borderRadius: '8px'
+            }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Round {roundIndex + 1}</div>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                gap: '0.75rem'
+              }}>
+                {roundBottles.map((bottle, bottleIndex) => (
+                  <div key={bottleIndex} style={{
+                    padding: '0.75rem',
+                    backgroundColor: 'var(--surface)',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    {bottle.funName || `Bottle ${roundIndex * 4 + bottleIndex + 1}`}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-        <button onClick={() => {
-          // Create a new game with the current bottles
-          let newGame = createInitialGame('');
-          
-          // Add all bottles to the game
-          bottles.forEach(bottle => {
-            newGame = addBottle(newGame, bottle.label, bottle.funName, bottle.price);
-          });
-          
-          // Finalize the setup and pass it to the parent
-          onGameCreated(finalizeSetup(newGame));
-        }}>Start Game</button>
+          ))}
+        </div>
       </div>
     );
   };
 
+  const handleSetupComplete = (setup: {
+    players: number;
+    bottles: number;
+    rounds: number;
+    bottlesPerRound: number;
+  }) => {
+    const gameSetup: SetupOption = {
+      players: setup.players,
+      bottles: setup.bottles,
+      rounds: setup.rounds,
+      bottlesPerRound: setup.bottlesPerRound,
+      bottleEqPerPerson: 0, // This will be calculated
+      ozPerPersonPerBottle: 0 // This will be calculated
+    };
+    
+    // Find the matching setup with all details
+    const matchingSetup = getMatchingSetup(setup);
+    if (matchingSetup) {
+      setGameSetup(matchingSetup);
+    } else {
+      console.warn('No matching setup found, using partial setup');
+      setGameSetup(gameSetup);
+    }
+  };
+  
+  // Helper function to find a matching setup with all details
+  const getMatchingSetup = (setup: {
+    players: number;
+    bottles: number;
+    rounds: number;
+    bottlesPerRound: number;
+  }): SetupOption | undefined => {
+    // Import the wineySetups array
+    const { wineySetups } = require('../../utils/gameSetups');
+    
+    return wineySetups.find((s: SetupOption) => 
+      s.players === setup.players &&
+      s.bottles === setup.bottles &&
+      s.rounds === setup.rounds &&
+      s.bottlesPerRound === setup.bottlesPerRound
+    );
+  };
+
+  if (!setupComplete) {
+    return (
+      <div className="game-setup">
+        <GameSetupWizard onSetupComplete={handleSetupComplete} />
+      </div>
+    );
+  }
+
   return (
     <div className="game-setup">
-      <h2>Create New Game</h2>
-      
-      {/* Host name input */}
-      <div className="host-input">
-        <label>Host Name:</label>
-        <input
-          type="text"
-          value={hostName}
-          onChange={(e) => setHostName(e.target.value)}
-          placeholder="Enter your display name"
-        />
-      </div>
-
-      {/* Bottles form */}
-      <div className="bottles-form">
-        <h3>Bottle Information</h3>
-        {bottles.map((bottle, index) => (
-          <div key={index} className="bottle-row">
-            <div className="bottle-label">
-              <label>Label:</label>
-              <input
-                type="text"
-                value={bottle.label}
-                onChange={(e) => handleBottleChange(index, 'label', e.target.value)}
-                placeholder="Label Name (3-20 chars)"
-              />
-            </div>
-            <div className="bottle-fun-name">
-              <label>Fun Name:</label>
-              <input
-                type="text"
-                value={bottle.funName}
-                onChange={(e) => handleBottleChange(index, 'funName', e.target.value)}
-                placeholder="Fun Name (optional)"
-              />
-            </div>
-            <div className="bottle-price">
-              <label>Price:</label>
-              <input
-                type="number"
-                value={bottle.price}
-                onChange={(e) => handleBottleChange(index, 'price', Number(e.target.value) || 1)}
-                min="1"
-                placeholder="Price (≥1)"
-              />
-            </div>
+      <div className="setup-header">
+        <h2>Add Your Bottles</h2>
+        {gameSetup && (
+          <div className="setup-details">
+            <div>{gameSetup.players} Players</div>
+            <div>{gameSetup.rounds} Rounds</div>
+            <div>{gameSetup.bottlesPerRound} Bottles per Round</div>
+            <div>~{gameSetup.bottleEqPerPerson.toFixed(2)} Bottles per Person</div>
           </div>
-        ))}
+        )}
       </div>
-
-      {/* Error display */}
-      {errors.length > 0 && (
-        <div className="errors">
-          {errors.map((error, index) => (
-            <div key={index} className="error-message">{error}</div>
+      
+      <form>
+        <div className="bottle-list">
+          {bottles.map((bottle, index) => (
+            <div key={index} className="bottle-row">
+              <div className="form-group">
+                <label>Label Name</label>
+                <input
+                  type="text"
+                  value={bottle.labelName}
+                  onChange={(e) => handleBottleChange(index, 'labelName', e.target.value)}
+                  placeholder="e.g., Château Margaux"
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Fun Name (Optional)</label>
+                <input
+                  type="text"
+                  value={bottle.funName}
+                  onChange={(e) => handleBottleChange(index, 'funName', e.target.value)}
+                  placeholder="e.g., The Fancy One"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Price ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={bottle.price}
+                  onChange={(e) => handleBottleChange(index, 'price', parseFloat(e.target.value) || 0)}
+                  required
+                />
+              </div>
+            </div>
           ))}
+        </div>
+        
+        <div className="actions">
+          <button 
+            type="button" 
+            className="submit-btn"
+            onClick={handleStartGame}
+          >
+            Start Game
+          </button>
+        </div>
+      </form>
+
+      {errors.length > 0 && (
+        <div className="card" style={{ marginTop: '2rem', borderColor: 'var(--error)', backgroundColor: 'rgba(229, 62, 62, 0.05)' }}>
+          <h4 style={{ color: 'var(--error)', marginTop: 0 }}>Please fix the following errors:</h4>
+          <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '1.5rem' }}>
+            {errors.map((error, i) => (
+              <li key={i} style={{ color: 'var(--error)', marginBottom: '0.25rem' }}>{error}</li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className="setup-actions">
-        <button onClick={createAndRandomizeGame} disabled={errors.length > 0}>
-          Create & Randomize Game
-        </button>
-      </div>
-
-      {/* Preview grid */}
-      {generatePreview()}
+      {previewVisible && (
+        <div className="card" style={{ marginTop: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h3 style={{ margin: 0 }}>Game Preview</h3>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setPreviewVisible(false)}
+              style={{ padding: '0.5rem 1rem' }}
+            >
+              Close
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Host</div>
+              <div style={{ fontWeight: 500 }}>{hostName || '—'}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Number of Bottles</div>
+              <div style={{ fontWeight: 500 }}>{bottles.filter(b => b.labelName.trim() !== '').length}</div>
+            </div>
+          </div>
+          {generatePreview()}
+        </div>
+      )}
     </div>
   );
 };
-
-// Add styles
-const styles = `:global {
-  .game-setup {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-
-  .host-input {
-    margin-bottom: 20px;
-  }
-
-  .bottles-form {
-    margin-bottom: 20px;
-  }
-
-  .bottle-row {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
-    padding: 10px;
-    background: #f8f8f8;
-    border-radius: 4px;
-  }
-
-  .bottle-label,
-  .bottle-fun-name,
-  .bottle-price {
-    display: flex;
-    flex-direction: column;
-  }
-
-  input {
-    margin-top: 5px;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-
-  .errors {
-    margin: 10px 0;
-    padding: 10px;
-    background: #fee;
-    border: 1px solid #f00;
-    border-radius: 4px;
-  }
-
-  .error-message {
-    color: #f00;
-    margin: 5px 0;
-  }
-
-  .setup-actions {
-    margin-top: 20px;
-  }
-
-  .preview-grid {
-    margin-top: 20px;
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-
-  .round-row {
-    display: grid;
-    grid-template-columns: 100px 1fr;
-    margin-bottom: 10px;
-  }
-
-  .round-label {
-    font-weight: bold;
-  }
-
-  .bottles-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-  }
-
-  .bottle-cell {
-    padding: 10px;
-    background: #f8f8f8;
-    border-radius: 4px;
-    text-align: center;
-  }
-
-  button {
-    padding: 10px 20px;
-    background: #333;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-}
-`;
-
-export default styles;

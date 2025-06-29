@@ -100,6 +100,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           newState.game.status = 'final';
           break;
           
+        case 'ADVANCE_ROUND':
+          if (data.roundNumber !== undefined) {
+            newState.game.currentRound = data.roundNumber;
+            newState.game.status = 'in_round';
+          }
+          break;
+          
         case 'UPDATE_GAME':
           newState.game = { ...newState.game, ...data.game };
           break;

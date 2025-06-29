@@ -78,23 +78,34 @@ const styles = `:global {
   }
 
   h2 {
-    margin-bottom: 20px;
+    font-size: var(--text-xl);
+    font-weight: 600;
+    margin: 0 0 1.25rem 0;
+    color: #fff;
+    font-family: var(--font-sans);
   }
 
   .timer {
-    font-size: 4em;
-    font-weight: bold;
-    margin-bottom: 20px;
+    font-size: 6rem; /* Using a larger size for countdown, but now in rem */
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    line-height: 1;
+    font-family: var(--font-sans);
   }
 
   .undo-button {
-    padding: 10px 20px;
-    background: #f00;
+    padding: 0.625rem 1.25rem;
+    background: var(--error);
     color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 500;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .undo-button:hover {

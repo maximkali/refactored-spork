@@ -4,7 +4,7 @@
   "description": "TypeScript implementation of bottle game data model",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "homepage": "https://maximkali.github.io/refactored-spork",
+  "homepage": ".",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -32,8 +32,11 @@
     "@types/react-router-dom": "^5.3.3",
     "@types/seedrandom": "^3.0.8",
     "@types/uuid": "^9.0.0",
+    "autoprefixer": "^10.4.21",
     "jest": "^27.5.1",
+    "postcss": "^8.5.6",
     "react-scripts": "5.0.1",
+    "tailwindcss": "^4.1.11",
     "ts-jest": "^27.1.5",
     "typescript": "^4.9.5"
   },

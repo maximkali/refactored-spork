@@ -322,7 +322,7 @@ const styles = `:global {
   }
 
   .player-score {
-    font-size: 0.9em;
+    font-size: var(--text-sm);
     color: #666;
   }
 

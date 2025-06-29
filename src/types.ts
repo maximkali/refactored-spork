@@ -5,7 +5,7 @@ export type BottleArray = Array<Bottle>;
 export type RoundArray = Array<Round>;
 export type PlayerArray = Array<Player>;
 
-export type Status = 'setup' | 'lobby' | 'in_round' | 'countdown' | 'reveal' | 'gambit' | 'final';
+export type Status = 'setup' | 'lobby' | 'in_round' | 'countdown' | 'reveal' | 'gambit' | 'final' | 'completed';
 export type PlayerStatus = 'active' | 'kicked' | 'spectator';
 
 export type GameAction = 
